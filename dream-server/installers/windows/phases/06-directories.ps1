@@ -63,9 +63,12 @@ $_dirs = @(
     (Join-Path $_dataDir "models"),
     (Join-Path $_dataDir "comfyui"),
     (Join-Path $_dataDir "perplexica"),
+    (Join-Path $_dataDir "ape"),
+    (Join-Path $_dataDir "token-spy"),
+    (Join-Path $_dataDir "privacy-shield"),
     (Join-Path $_dataDir "hermes"),
-    (Join-Path $_dataDir "hermes-proxy\caddy-data"),
-    (Join-Path $_dataDir "hermes-proxy\caddy-config")
+    (Join-Path (Join-Path $_dataDir "hermes-proxy") "caddy-data"),
+    (Join-Path (Join-Path $_dataDir "hermes-proxy") "caddy-config")
 )
 foreach ($_d in $_dirs) {
     New-Item -ItemType Directory -Path $_d -Force | Out-Null

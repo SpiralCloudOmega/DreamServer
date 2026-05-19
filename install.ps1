@@ -9,6 +9,8 @@ param(
     [switch]$Voice,
     [switch]$Workflows,
     [switch]$Rag,
+    [switch]$Recommended,
+    [switch]$NoRecommended,
     [switch]$Hermes,
     [switch]$NoHermes,
     [switch]$OpenClaw,

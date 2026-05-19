@@ -417,9 +417,13 @@ show_install_menu() {
             ENABLE_VOICE=true
             ENABLE_WORKFLOWS=true
             ENABLE_RAG=true
+            ENABLE_RECOMMENDED=true
             ENABLE_HERMES=true
             ENABLE_OPENCLAW=false  # deprecated; Hermes is the new default
             ENABLE_COMFYUI=true
+            ENABLE_APE=true
+            ENABLE_PERPLEXICA=true
+            ENABLE_PRIVACY_SHIELD=true
             ENABLE_LANGFUSE=true
 
             # Disable image generation on low-tier systems (insufficient RAM/VRAM)
@@ -439,9 +443,13 @@ show_install_menu() {
             ENABLE_VOICE=false
             ENABLE_WORKFLOWS=false
             ENABLE_RAG=false
+            ENABLE_RECOMMENDED=false
             ENABLE_HERMES=false
             ENABLE_OPENCLAW=false
             ENABLE_COMFYUI=false
+            ENABLE_APE=false
+            ENABLE_PERPLEXICA=false
+            ENABLE_PRIVACY_SHIELD=false
             ENABLE_LANGFUSE=false
             ;;
         3)
@@ -453,9 +461,13 @@ show_install_menu() {
             ENABLE_VOICE=true
             ENABLE_WORKFLOWS=true
             ENABLE_RAG=true
+            ENABLE_RECOMMENDED=true
             ENABLE_HERMES=true
             ENABLE_OPENCLAW=false  # deprecated; Hermes is the new default
             ENABLE_COMFYUI=true
+            ENABLE_APE=true
+            ENABLE_PERPLEXICA=true
+            ENABLE_PRIVACY_SHIELD=true
             ENABLE_LANGFUSE=true
 
             # Disable image generation on low-tier systems (insufficient RAM/VRAM)

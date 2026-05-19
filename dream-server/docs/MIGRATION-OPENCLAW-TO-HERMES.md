@@ -12,7 +12,7 @@ This document covers the migration path for existing Dream Server installs that 
 
 ## Platform support in this release
 
-The default-agent swap is wired through the **Linux, macOS, and Windows** installers in this release. Windows now has installer parity with `-Hermes` / `-NoHermes` flags, Hermes data-dir creation, and the same context handling used on the other platforms.
+The default-agent swap is wired through the **Linux, macOS, and Windows** installers in this release. New installs select Hermes for agent-enabled profiles, keep OpenClaw disabled unless the operator explicitly opts in with `--openclaw` on Linux/macOS or `-OpenClaw` on Windows, and Windows now has parity for `-Hermes` / `-NoHermes`, Hermes data-dir creation, and the same context handling used on the other platforms.
 
 ## Why the swap
 
