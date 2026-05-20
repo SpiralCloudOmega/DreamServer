@@ -388,9 +388,20 @@ if [[ -n "$DOCKER_CMD" ]] && $DOCKER_CMD ps --filter name=dream-llama-server --f
             $DOCKER_CMD restart dream-llama-server 2>&1 || true
         fi
     else
-        # llama.cpp: force-recreate to pick up new GGUF_FILE from .env
+        # llama.cpp: force-recreate to pick up new GGUF_FILE from .env.
+        # `env -u` strips the model-config vars from compose's shell so they
+        # cannot win interpolation over the freshly-updated .env. Compose
+        # variable precedence is shell-env > .env file > compose default,
+        # and Phase 11 of the installer (parent of this nohup'd script) sets
+        # GGUF_FILE / LLM_MODEL / MAX_CONTEXT / CTX_SIZE to the bootstrap
+        # values as shell variables before forking us. Empirically those
+        # leak into our env on Linux even without an explicit `export`, and
+        # without this guard compose silently recreates the container with
+        # `--model /models/${BOOTSTRAP_GGUF_FILE}` — pointing at the file
+        # Phase 4b just deleted, hence the crash-loop on next restart.
         if [[ ${#COMPOSE_ARGS[@]} -gt 0 && -n "$DOCKER_COMPOSE_CMD" ]]; then
-            $DOCKER_COMPOSE_CMD "${COMPOSE_ARGS[@]}" up -d --force-recreate --no-deps llama-server 2>&1 || true
+            env -u GGUF_FILE -u LLM_MODEL -u MAX_CONTEXT -u CTX_SIZE \
+                $DOCKER_COMPOSE_CMD "${COMPOSE_ARGS[@]}" up -d --force-recreate --no-deps llama-server 2>&1 || true
         else
             # No compose flags — use docker rm to force a fresh container that
             # re-reads GGUF_FILE from the env file. 'docker start' reuses the old
@@ -478,8 +489,21 @@ if [[ -n "$DOCKER_CMD" ]] && $DOCKER_CMD ps --filter name=dream-llama-server --f
         elif ! [[ "$_running_cmd" == *"/models/${FULL_GGUF_FILE}"* ]]; then
             log "ERROR: llama-server container started with stale --model arg."
             log "  expected /models/${FULL_GGUF_FILE}, got: $_running_cmd"
-            log "  This means 'compose up -d --force-recreate' did not recreate the container."
-            log "  Recover with: cd $INSTALL_DIR && docker compose \$(cat .compose-flags) up -d --force-recreate --no-deps llama-server"
+            log "  This means 'compose up -d --force-recreate' did not pick up the updated .env."
+            # Dump what compose would have seen so a future regression can be
+            # diagnosed from logs alone. If any of these have non-empty values,
+            # they overrode the .env at compose interpolation time.
+            for _k in GGUF_FILE LLM_MODEL MAX_CONTEXT CTX_SIZE; do
+                _v="$(printenv "$_k" 2>/dev/null || true)"
+                if [[ -n "$_v" ]]; then
+                    log "  shell env leak: $_k=$_v (overrode .env's $_k)"
+                fi
+            done
+            log "  .env now has:"
+            for _k in GGUF_FILE LLM_MODEL MAX_CONTEXT CTX_SIZE; do
+                log "    $(grep -E "^${_k}=" "$ENV_FILE" 2>/dev/null || echo "${_k}=<missing>")"
+            done
+            log "  Recover with: cd $INSTALL_DIR && env -u GGUF_FILE -u LLM_MODEL -u MAX_CONTEXT -u CTX_SIZE docker compose \$(cat .compose-flags) up -d --force-recreate --no-deps llama-server"
             write_status "failed"
             fail "llama-server container started with stale --model arg after force-recreate."
         fi
@@ -523,6 +547,8 @@ LITELLM_UPGRADE_EOF
         # Recreate OpenClaw so inject-token.js picks up the new GGUF_FILE/LLM_MODEL
         # from .env. A restart alone won't work — env vars are baked in at container
         # creation time, and inject-token.js builds the Lemonade model name from them.
+        # Strip the same model-config vars here as the llama-server recreate path
+        # so shell-env pollution cannot override the freshly-updated .env.
         if $DOCKER_CMD ps --filter name=dream-openclaw --format '{{.Names}}' 2>/dev/null | grep -q dream-openclaw; then
             log "Recreating OpenClaw to pick up model change..."
             # Guard on BOTH compose args AND a non-empty $DOCKER_COMPOSE_CMD —
@@ -534,10 +560,11 @@ LITELLM_UPGRADE_EOF
             # which executes the first compose-arg (e.g. `-f`) as a binary.
             # Skip the recreate and surface a clear warning instead.
             if [[ ${#COMPOSE_ARGS[@]} -gt 0 && -n "$DOCKER_COMPOSE_CMD" ]]; then
-                $DOCKER_COMPOSE_CMD "${COMPOSE_ARGS[@]}" up -d --force-recreate openclaw 2>&1 || \
+                env -u GGUF_FILE -u LLM_MODEL -u MAX_CONTEXT -u CTX_SIZE \
+                    $DOCKER_COMPOSE_CMD "${COMPOSE_ARGS[@]}" up -d --force-recreate openclaw 2>&1 || \
                     log "WARNING: OpenClaw recreate failed (non-fatal)"
             else
-                log "WARNING: No compose binary available (DOCKER_COMPOSE_CMD empty or compose args missing) — OpenClaw was NOT recreated. The new model will not take effect until OpenClaw is recreated manually with: docker compose up -d --force-recreate openclaw"
+                log "WARNING: No compose binary available (DOCKER_COMPOSE_CMD empty or compose args missing) — OpenClaw was NOT recreated. The new model will not take effect until OpenClaw is recreated manually with: env -u GGUF_FILE -u LLM_MODEL -u MAX_CONTEXT -u CTX_SIZE docker compose up -d --force-recreate openclaw"
             fi
         fi
         # Patch Hermes Agent's config so it stops asking the LLM server for the
